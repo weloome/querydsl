@@ -4,7 +4,9 @@ import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.ExpressionUtils;
+import com.querydsl.core.types.Predicate;
 import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPAExpressions;
@@ -534,7 +536,6 @@ public class QuerydslBasicTest {
         List<Member> result = searchMember1(usernameParam, ageParam);
         assertThat(result.size()).isEqualTo(1);
     }
-
     private List<Member> searchMember1(String usernameCont, Integer ageCond) {
         BooleanBuilder builder = new BooleanBuilder();
         if (usernameCont != null) {
@@ -548,5 +549,30 @@ public class QuerydslBasicTest {
                 .selectFrom(member)
                 .where(builder)
                 .fetch();
+    }
+
+    @Test
+    public void dynamicQuery_WhereParam() {
+        String usernameParam = "member1";
+        Integer ageParam = null;
+
+        List<Member> result = searchMember2(usernameParam, ageParam);
+        assertThat(result.size()).isEqualTo(1);
+    }
+    private List<Member> searchMember2(String usernameCont, Integer ageCond) {
+        return queryFactory
+                .selectFrom(member)
+                .where(allEq(usernameCont, ageCond)) // where에 null이 들어가면 무시::동작없음
+                .fetch();
+    }
+    private BooleanExpression usernameEq(String usernameCont) {
+        return usernameCont != null ? member.username.eq(usernameCont) : null;
+    }
+    private BooleanExpression ageEq(Integer ageCond) {
+        return ageCond != null ? member.age.eq(ageCond) : null;
+    }
+    private BooleanExpression allEq(String usernameCont, Integer ageCond) {
+        // null 처리는 따로 챙겨줘야 함
+        return usernameEq(usernameCont).and(ageEq(ageCond));
     }
 }
